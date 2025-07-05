@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"go-todo-cli/tasks"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 func Add(title string) error {
@@ -17,9 +15,13 @@ func Add(title string) error {
 	if err != nil {
 		return err
 	}
+	newID := 1
+	if len(tasksList) > 0 {
+		newID = tasksList[len(tasksList)-1].ID + 1
+	}
 
 	newTask := tasks.Task{
-		ID:        uuid.New(),
+		ID:        newID,
 		Title:     title,
 		Completed: false,
 	}

@@ -57,7 +57,7 @@ DB_NAME=goNotes
 
 ```bash
 # Clone the project
-git clone https://github.com/your-username/go-notes.git
+git clone https://github.com/saurabhm02/goThings.git
 cd go-notes
 
 # Install dependencies

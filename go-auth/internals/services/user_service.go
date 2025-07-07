@@ -46,7 +46,7 @@ func (s *UserService) RegisterUser(user models.User) (models.Response, error) {
 			Message: "User already exists",
 		}, nil
 	} else if err != mongo.ErrNoDocuments {
-		log.Fatalln("error while finding user from the db:", err)
+		log.Println("error while finding user from the db:", err)
 		return models.Response{
 			Status:  "Error",
 			Message: "Database error while finding user",
@@ -55,10 +55,10 @@ func (s *UserService) RegisterUser(user models.User) (models.Response, error) {
 
 	hashedPassword, err := utils.HashPassword(user.Password)
 	if err != nil {
-		log.Fatalln("error while hashing password:", err)
+		log.Println("No user found with this email")
 		return models.Response{
 			Status:  "Error",
-			Message: "Hashing password error",
+			Message: "No user found with this email",
 		}, err
 	}
 
@@ -137,7 +137,43 @@ func (s *UserService) LoginUser(email, password string) (models.Response, error)
 	}, nil
 }
 
-// func (s *UserService) GetUserByEmail(emailId string) (models.Response, error) {
-// 	log.Println("Request to getting user by emailId")
+func (s *UserService) GetUserByEmail(emailId string) (models.Response, error) {
+	log.Println("Request to getting user by emailId")
 
-// }
+	query := primitive.M{"email": emailId}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var user models.User
+	err := s.db.FindOne(ctx, query).Decode(&user)
+	if err == nil {
+		log.Println("No user found with this email")
+		return models.Response{
+			Status:  "Error",
+			Message: "No user found with this email",
+		}, err
+	}
+
+	log.Println("User found successfully!")
+	return models.Response{
+		Status:  "Sucess",
+		Message: "User found successfully!",
+		Data:    user,
+	}, nil
+}
+
+func (s *UserService) IsUserAdmin(email string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	query := primitive.M{"email": email}
+
+	var user models.User
+	err := s.db.FindOne(ctx, query).Decode(&user)
+	if err != nil {
+		log.Println("No user found or error in fetching user:", err)
+		return false
+	}
+
+	return user.Role == models.RoleAdmin
+}

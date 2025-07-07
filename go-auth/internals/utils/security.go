@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"go-auth/internals/models"
 	"os"
 	"time"
 
@@ -27,19 +28,14 @@ func ComparePassword(password, hash string) bool {
 	return err == nil
 }
 
-func CreateToken(username string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"username": username,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
-		})
+func CreateToken(username string, role models.Role) (string, error) {
+	claims := jwt.MapClaims{}
+	claims["username"] = username
+	claims["role"] = role
+	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
 
-	tokenString, err := token.SignedString(secretKey)
-	if err != nil {
-		return "", err
-	}
-
-	return tokenString, nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 }
 
 func VerifyToken(tokenString string) error {
@@ -56,4 +52,37 @@ func VerifyToken(tokenString string) error {
 	}
 
 	return nil
+}
+
+func ParseToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		return secretKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("invalid token claims")
+}
+
+func GetRoleFromToken(tokenString string) (models.Role, error) {
+	claims, err := ParseToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+
+	roleStr, ok := claims["role"].(string)
+	if !ok {
+		return "", errors.New("role claim missing or invalid")
+	}
+
+	return models.Role(roleStr), nil
 }

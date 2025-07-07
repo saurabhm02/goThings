@@ -37,6 +37,7 @@ func ConnectDb() error {
 	MongoClient = client
 	MongoDB = client.Database(dbName)
 
+	log.Println("Successfully connected to MongoDB!")
 	return nil
 }
 
@@ -44,6 +45,6 @@ func GetDB() *mongo.Database {
 	return MongoDB
 }
 
-func GetMonogClient() *mongo.Client {
+func GetMongoClient() *mongo.Client {
 	return MongoClient
 }

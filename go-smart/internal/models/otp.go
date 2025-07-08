@@ -5,9 +5,9 @@ import (
 )
 
 type OTP struct {
-	UserId    string    `bson:"userId" json:"userId"`
+	Email     string    `bson:"email" json:"email"`
+	Number    int       `bson:"number,omitempty" json:"number,omitempty"`
 	Otp       string    `bson:"otp" json:"otp"`
-	Type      string    `bson:"type" json:"type"`
 	ExpireAt  time.Time `bson:"expireAt" json:"expireAt"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
 	UpdatedAt time.Time `bson:"updatedAt" json:"updatedAt"`

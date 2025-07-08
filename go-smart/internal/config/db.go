@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"go-smart/internal/utils"
 	"os"
 
@@ -21,17 +22,26 @@ func ConnectDb() error {
 	url := os.Getenv("MONGO_URL")
 	dbName := os.Getenv("DB_NAME")
 
+	if url == "" || dbName == "" {
+		return fmt.Errorf("MONGO_URL or DB_NAME environment variable not set")
+	}
+
 	clientOptions := options.Client().ApplyURI(url)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		log.Errorf("Error while connecting to db! %v", err)
+		log.Errorf("Error connecting to MongoDB: %v", err)
+		return err
 	}
+
 	if err := client.Ping(ctx, nil); err != nil {
-		log.Errorf("Error while pinging with the db!", err)
+		log.Errorf("MongoDB ping failed: %v", err)
+		return err
 	}
+
 	MongoClient = client
 	MongoDb = client.Database(dbName)
-	log.Info("successfuly database connected!")
+
+	log.Info("Successfully connected to the database!")
 	return nil
 }
 

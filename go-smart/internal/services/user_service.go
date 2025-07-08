@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go-smart/internal/models"
 	"go-smart/internal/utils"
+	"time"
 
 	"github.com/gofiber/fiber/v2/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -43,6 +44,26 @@ func (u *UserService) RegisterUser(user models.User) (models.Response, error) {
 			Status:  "Error",
 			Message: "user is already exist!, use different email to create a new user!",
 		}, errors.New("user is already exist!, use different email to create a new user!")
+	}
+	hashedPassword, err := utils.HashedPassword(password)
+	if err != nil {
+		log.Error("Error while hashing password!")
+		return models.Response{
+			Status:  "Error",
+			Message: "Error while hashing password!",
+		}, err
+	}
+
+	user.Password = hashedPassword
+	user.CreatedAt = time.Now()
+	user.UpdatedAt = time.Now()
+	_, err = u.db.InsertOne(ctx, user)
+	if err != nil {
+		log.Error("error while inserting user:", err)
+		return models.Response{
+			Status:  "Error",
+			Message: "Error while inserting user",
+		}, err
 	}
 
 }

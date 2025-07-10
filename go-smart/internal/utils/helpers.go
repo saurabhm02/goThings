@@ -55,7 +55,7 @@ func SendMail(to, subject, msg string) error {
 		return err
 	}
 
-	log.Printf("Successfully sent email to ****%s", to[len(to)-4:])
+	log.Printf("Successfully sent email to %s", to)
 	return nil
 }
 
@@ -99,10 +99,11 @@ func CheckOtp(phone, code string) error {
 		return errors.New("Invalid OTP or expired")
 	}
 
-	if *resp.Status == "approved" {
+	if resp.Status != nil && *resp.Status == "approved" {
 		log.Printf("OTP approved for phone ****%s", phone[len(phone)-4:])
 		return nil
 	}
 
+	log.Printf("OTP rejected for phone ****%s", phone[len(phone)-4:])
 	return errors.New("Invalid OTP")
 }

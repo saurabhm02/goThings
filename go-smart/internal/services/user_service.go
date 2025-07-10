@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go-smart/internal/models"
 	"go-smart/internal/utils"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -22,12 +23,12 @@ func NewUserService(db *mongo.Collection) *UserService {
 }
 
 func (u *UserService) RegisterUser(user models.User) (models.Response, error) {
-	log.Info("Request to register a user! %v", user)
+	log.Infof("Request to register a user! %v", user)
 
-	ctx, canel := utils.GetContext()
-	defer canel()
+	ctx, cancel := utils.GetContext()
+	defer cancel()
 	userName, email, mobile, password := user.Name, user.Email, user.Number, user.Password
-	if userName == "" || email == "" || mobile == "" || password == "" {
+	if userName == "" || email == "" || password == "" || mobile == 0 {
 		log.Warn("required fields can not be empty, please fill all the required fields!")
 		return models.Response{
 			Status:  "Error",
@@ -35,15 +36,21 @@ func (u *UserService) RegisterUser(user models.User) (models.Response, error) {
 		}, errors.New("required fields can not be empty, please fill all the required fields!")
 	}
 
-	var existingUser *models.User
-	query := primitive.M{"email": email}
+	query := primitive.M{"email": strings.ToLower(email)}
+	var existingUser models.User
 	err := u.db.FindOne(ctx, query).Decode(&existingUser)
-	if err != nil {
-		log.Warn("user is already exist!, use different email to create a new user!")
+	if err == nil {
+		log.Warn("User already exists")
 		return models.Response{
 			Status:  "Error",
-			Message: "user is already exist!, use different email to create a new user!",
-		}, errors.New("user is already exist!, use different email to create a new user!")
+			Message: "User already exists with this email!",
+		}, errors.New("User already exists")
+	} else if err != mongo.ErrNoDocuments {
+		log.Error("DB error while checking for existing user: ", err)
+		return models.Response{
+			Status:  "Error",
+			Message: "DB error while checking for existing user",
+		}, err
 	}
 	hashedPassword, err := utils.HashedPassword(password)
 	if err != nil {
@@ -65,5 +72,19 @@ func (u *UserService) RegisterUser(user models.User) (models.Response, error) {
 			Message: "Error while inserting user",
 		}, err
 	}
-
+	log.Info("User create successfully!")
+	otpService := NewOtpService()
+	if err := otpService.GenerateAndSendOtp(email, user.SendOtpToEmail); err != nil {
+		log.Error("Error while generaating otp for %s", email)
+		return models.Response{
+			Status:  "Error",
+			Message: "Error while generaating otp",
+		}, err
+	}
+	log.Info("User created and OTP sent for verification successfully!")
+	return models.Response{
+		Status:  "Success",
+		Message: "User created and OTP sent for verification successfully!!",
+		Data:    user,
+	}, nil
 }
